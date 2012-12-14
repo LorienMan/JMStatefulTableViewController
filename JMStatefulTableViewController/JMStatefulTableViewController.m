@@ -8,13 +8,6 @@
 
 #import "JMStatefulTableViewController.h"
 
-@interface SVPullToRefresh ()
-
-@property (nonatomic, copy) void (^pullToRefreshActionHandler)(void);
-@property (nonatomic, copy) void (^infiniteScrollingActionHandler)(void);
-
-@end
-
 static const int kLoadingCellTag = 257;
 
 @interface JMStatefulTableViewController ()
@@ -158,16 +151,16 @@ static const int kLoadingCellTag = 257;
     return cell;
 }
 - (BOOL) _indexRepresentsLastSection:(NSInteger)section {
-    NSInteger totalNumberOfSections = [self numberOfSectionsInTableView:self.tableView];
+    NSInteger totalNumberOfSections = [self.tableView.dataSource numberOfSectionsInTableView:self.tableView];
     if(section != (totalNumberOfSections - 1)) return NO; //section is not the last section!
 
     return YES;
 }
 - (BOOL) _indexPathRepresentsLastRow:(NSIndexPath *)indexPath {
-    NSInteger totalNumberOfSections = [self numberOfSectionsInTableView:self.tableView];
+    NSInteger totalNumberOfSections = [self.tableView.dataSource numberOfSectionsInTableView:self.tableView];
     if(indexPath.section != (totalNumberOfSections - 1)) return NO; //indexPath.section is not the last section!
 
-    NSInteger totalNumberOfRowsInSection = [self tableView:self.tableView numberOfRowsInSection:indexPath.section];
+    NSInteger totalNumberOfRowsInSection = [self.tableView.dataSource tableView:self.tableView numberOfRowsInSection:indexPath.section];
     if(indexPath.row != (totalNumberOfRowsInSection - 1)) return NO; //indexPath.row is not the last row in this section!
 
     return YES;
@@ -177,9 +170,9 @@ static const int kLoadingCellTag = 257;
 
     NSInteger numberOfRows = 0;
 
-    NSInteger numberOfSections = [self numberOfSectionsInTableView:self.tableView];
+    NSInteger numberOfSections = [self.tableView.dataSource numberOfSectionsInTableView:self.tableView];
     for(NSInteger i = 0; i < numberOfSections; i++) {
-        numberOfRows += [self tableView:self.tableView numberOfRowsInSection:i];
+        numberOfRows += [self.tableView.dataSource tableView:self.tableView numberOfRowsInSection:i];
     }
 
     self.isCountingRows = NO;
@@ -212,7 +205,7 @@ static const int kLoadingCellTag = 257;
         [self.statefulDelegate statefulTableViewController:self willTransitionToState:statefulState];
     }
 
-	_statefulState = statefulState;
+    _statefulState = statefulState;
 
     switch (_statefulState) {
         case JMStatefulTableViewControllerStateIdle:
@@ -250,7 +243,7 @@ static const int kLoadingCellTag = 257;
         case JMStatefulTableViewControllerStateLoadingFromPullToRefresh:
             // TODO
             break;
-            
+
         case JMStatefulTableViewControllerError:
             self.tableView.backgroundView = self.errorView;
             self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
@@ -324,13 +317,14 @@ static const int kLoadingCellTag = 257;
     }
 
     if (shouldInfinitelyScroll) {
-        if(self.tableView.infiniteScrollingView.infiniteScrollingActionHandler == nil) {
+        if(self.tableView.infiniteScrollingView == nil) {
             [self.tableView addInfiniteScrollingWithActionHandler:^{
                 [safeSelf _loadNextPage];
             }];
+            self.tableView.showsInfiniteScrolling = YES;
         }
     } else {
-        self.tableView.infiniteScrollingView.infiniteScrollingActionHandler = nil;
+        self.tableView.showsInfiniteScrolling = NO;
         self.tableView.tableFooterView = nil;
     }
 
@@ -352,10 +346,10 @@ static const int kLoadingCellTag = 257;
 }
 
 - (void) statefulTableViewControllerWillBeginLoadingNextPage:(JMStatefulTableViewController *)vc completionBlock:(void (^)())success failure:(void (^)(NSError *))failure {
-    NSAssert(NO, @"statefulTableViewControllerWillBeginLoadingNextPage:completionBlock:failure: is meant to be implementd by it's subclasses!");    
+    NSAssert(NO, @"statefulTableViewControllerWillBeginLoadingNextPage:completionBlock:failure: is meant to be implementd by it's subclasses!");
 }
 - (BOOL) statefulTableViewControllerShouldBeginLoadingNextPage:(JMStatefulTableViewController *)vc {
-    NSAssert(NO, @"statefulTableViewControllerShouldBeginLoadingNextPage is meant to be implementd by it's subclasses!");    
+    NSAssert(NO, @"statefulTableViewControllerShouldBeginLoadingNextPage is meant to be implementd by it's subclasses!");
 
     return NO;
 }
