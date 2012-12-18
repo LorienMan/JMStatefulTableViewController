@@ -125,6 +125,12 @@ static const int kLoadingCellTag = 257;
             }
         }
 
+        if([self.statefulDelegate statefulTableViewControllerShouldBeginLoadingNextPage:self]) {
+            self.tableView.showsInfiniteScrolling = YES;
+        } else {
+            self.tableView.showsInfiniteScrolling = NO;
+        }
+
         self.statefulState = JMStatefulTableViewControllerStateIdle;
         [self _pullToRefreshFinishedLoading];
     } failure:^(NSError *error) {
