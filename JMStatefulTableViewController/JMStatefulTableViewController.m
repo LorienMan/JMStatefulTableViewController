@@ -8,8 +8,6 @@
 
 #import "JMStatefulTableViewController.h"
 
-static const int kLoadingCellTag = 257;
-
 @interface JMStatefulTableViewController ()
 
 @property (nonatomic, assign) BOOL isCountingRows;
@@ -23,10 +21,6 @@ static const int kLoadingCellTag = 257;
 - (void) _loadFromPullToRefresh;
 
 // Table View Cells & NSIndexPaths
-
-- (UITableViewCell *) _cellForLoadingCell;
-- (BOOL) _indexRepresentsLastSection:(NSInteger)section;
-- (BOOL) _indexPathRepresentsLastRow:(NSIndexPath *)indexPath;
 - (NSInteger) _totalNumberOfRows;
 - (CGFloat) _cumulativeHeightForCellsAtIndexPaths:(NSArray *)indexPaths;
 
@@ -143,34 +137,6 @@ static const int kLoadingCellTag = 257;
 
 #pragma mark - Table View Cells & NSIndexPaths
 
-- (UITableViewCell *) _cellForLoadingCell {
-    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
-
-    UIActivityIndicatorView *activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
-    activityIndicator.center = cell.center;
-    [cell addSubview:activityIndicator];
-
-    [activityIndicator startAnimating];
-
-    cell.tag = kLoadingCellTag;
-
-    return cell;
-}
-- (BOOL) _indexRepresentsLastSection:(NSInteger)section {
-    NSInteger totalNumberOfSections = [self.tableView.dataSource numberOfSectionsInTableView:self.tableView];
-    if(section != (totalNumberOfSections - 1)) return NO; //section is not the last section!
-
-    return YES;
-}
-- (BOOL) _indexPathRepresentsLastRow:(NSIndexPath *)indexPath {
-    NSInteger totalNumberOfSections = [self.tableView.dataSource numberOfSectionsInTableView:self.tableView];
-    if(indexPath.section != (totalNumberOfSections - 1)) return NO; //indexPath.section is not the last section!
-
-    NSInteger totalNumberOfRowsInSection = [self.tableView.dataSource tableView:self.tableView numberOfRowsInSection:indexPath.section];
-    if(indexPath.row != (totalNumberOfRowsInSection - 1)) return NO; //indexPath.row is not the last row in this section!
-
-    return YES;
-}
 - (NSInteger) _totalNumberOfRows {
     self.isCountingRows = YES;
 
@@ -216,7 +182,6 @@ static const int kLoadingCellTag = 257;
     switch (_statefulState) {
         case JMStatefulTableViewControllerStateIdle:
             self.tableView.backgroundView = nil;
-            self.tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
             self.tableView.scrollEnabled = YES;
             self.tableView.tableHeaderView.hidden = NO;
             self.tableView.tableFooterView.hidden = NO;
@@ -226,7 +191,6 @@ static const int kLoadingCellTag = 257;
 
         case JMStatefulTableViewControllerStateInitialLoading:
             self.tableView.backgroundView = self.loadingView;
-            self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
@@ -236,7 +200,6 @@ static const int kLoadingCellTag = 257;
 
         case JMStatefulTableViewControllerStateEmpty:
             self.tableView.backgroundView = self.emptyView;
-            self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
@@ -252,7 +215,6 @@ static const int kLoadingCellTag = 257;
 
         case JMStatefulTableViewControllerError:
             self.tableView.backgroundView = self.errorView;
-            self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
@@ -304,6 +266,7 @@ static const int kLoadingCellTag = 257;
         shouldPullToRefresh = [self.statefulDelegate statefulTableViewControllerShouldPullToRefresh:self];
     }
 
+    // TODO: for iOS 6 make possible to use standart control
     if(!self.hasAddedPullToRefreshControl && shouldPullToRefresh) {
         if([self respondsToSelector:@selector(refreshControl)]) {
             self.refreshControl = [[UIRefreshControl alloc] init];
@@ -331,8 +294,9 @@ static const int kLoadingCellTag = 257;
         }
     } else {
         self.tableView.showsInfiniteScrolling = NO;
-        self.tableView.tableFooterView = nil;
     }
+
+    // TODO: add handler to observe loading previous data
 
     [super viewWillAppear:animated];
 }
