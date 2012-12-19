@@ -56,6 +56,10 @@
 
     self.statefulState = JMStatefulTableViewControllerStateInitialLoading;
 
+    // For initial loading disable inf scrolling and pull to refresh
+    self.tableView.showsInfiniteScrolling = NO;
+    self.tableView.showsPullToRefresh = NO;
+
     [self.tableView reloadData];
 
     [self.statefulDelegate statefulTableViewControllerWillBeginInitialLoading:self completionBlock:^{
@@ -66,6 +70,8 @@
         } else {
             self.statefulState = JMStatefulTableViewControllerStateEmpty;
         }
+
+        [self updateControlsStatuses];
     } failure:^(NSError *error) {
         self.statefulState = JMStatefulTableViewControllerError;
     }];
@@ -81,15 +87,13 @@
         [self.statefulDelegate statefulTableViewControllerWillBeginLoadingNextPage:self completionBlock:^{
             [self.tableView reloadData];
 
-            if(![self.statefulDelegate statefulTableViewControllerShouldBeginLoadingNextPage:self]) {
-                self.tableView.showsInfiniteScrolling = NO;
-            };
-
             if([self _totalNumberOfRows] > 0) {
                 self.statefulState = JMStatefulTableViewControllerStateIdle;
             } else {
                 self.statefulState = JMStatefulTableViewControllerStateEmpty;
             }
+
+            [self updateControlsStatuses];
         } failure:^(NSError *error) {
             //TODO What should we do here?
             self.statefulState = JMStatefulTableViewControllerStateIdle;
@@ -119,20 +123,33 @@
             }
         }
 
-        if([self.statefulDelegate statefulTableViewControllerShouldBeginLoadingNextPage:self]) {
-            self.tableView.showsInfiniteScrolling = YES;
+        if([self _totalNumberOfRows] > 0) {
+            self.statefulState = JMStatefulTableViewControllerStateIdle;
         } else {
-            self.tableView.showsInfiniteScrolling = NO;
+            self.statefulState = JMStatefulTableViewControllerStateEmpty;
         }
 
-        self.statefulState = JMStatefulTableViewControllerStateIdle;
+        [self updateControlsStatuses];
         [self _pullToRefreshFinishedLoading];
     } failure:^(NSError *error) {
         //TODO: What should we do here?
-
         self.statefulState = JMStatefulTableViewControllerStateIdle;
         [self _pullToRefreshFinishedLoading];
     }];
+}
+
+- (void)updateControlsStatuses {
+    if([self.statefulDelegate statefulTableViewControllerShouldBeginLoadingNextPage:self]) {
+        self.tableView.showsInfiniteScrolling = YES;
+    } else {
+        self.tableView.showsInfiniteScrolling = NO;
+    }
+
+    if([self.statefulDelegate statefulTableViewControllerShouldPullToRefresh:self]) {
+        self.tableView.showsPullToRefresh = YES;
+    } else {
+        self.tableView.showsPullToRefresh = NO;
+    }
 }
 
 #pragma mark - Table View Cells & NSIndexPaths
@@ -230,19 +247,34 @@
     }
 }
 
+- (void)setEmptyView:(UIView *)emptyView {
+    if (_emptyView && self.tableView.backgroundView == _emptyView)
+        self.tableView.backgroundView = emptyView;
+    _emptyView = emptyView;
+}
+
+- (void)setLoadingView:(UIView *)loadingView {
+    if (_loadingView && self.tableView.backgroundView == _loadingView)
+        self.tableView.backgroundView = loadingView;
+    _loadingView = loadingView;
+}
+
+- (void)setErrorView:(UIView *)errorView {
+    if (_errorView && self.tableView.backgroundView == _errorView)
+        self.tableView.backgroundView = errorView;
+    _errorView = errorView;
+}
+
 #pragma mark - View Lifecycle
 
 - (void) loadView {
     [super loadView];
 
     self.loadingView = [[JMStatefulTableViewLoadingView alloc] initWithFrame:self.tableView.bounds];
-    self.loadingView.backgroundColor = [UIColor greenColor];
 
     self.emptyView = [[JMStatefulTableViewEmptyView alloc] initWithFrame:self.tableView.bounds];
-    self.emptyView.backgroundColor = [UIColor yellowColor];
 
     self.errorView = [[JMStatefulTableViewErrorView alloc] initWithFrame:self.tableView.bounds];
-    self.errorView.backgroundColor = [UIColor redColor];
 }
 
 - (void) viewDidLoad {
