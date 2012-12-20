@@ -59,6 +59,8 @@ typedef enum {
 @property (strong, nonatomic) UIView *loadingView;
 @property (strong, nonatomic) UIView *errorView;
 
+@property (strong, nonatomic) UIView <SVPullToRefreshViewProtocol> *pullToRefreshView;
+
 @property (nonatomic, unsafe_unretained) id <JMStatefulTableViewControllerDelegate> statefulDelegate;
 
 - (void) loadNewer;

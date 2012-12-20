@@ -27,6 +27,7 @@
 @end
 
 @implementation JMStatefulTableViewController
+@synthesize pullToRefreshView;
 
 - (id) initWithStyle:(UITableViewStyle)style {
     self = [super initWithStyle:style];
@@ -181,7 +182,7 @@
 }
 
 - (void) _pullToRefreshFinishedLoading {
-    [self.tableView.pullToRefreshView stopAnimating];
+    [self.tableView.pullToRefreshControl loadingCompleted];
     if([self respondsToSelector:@selector(refreshControl)]) {
         [self.refreshControl endRefreshing];
     }
@@ -265,6 +266,11 @@
     _errorView = errorView;
 }
 
+- (void)setPullToRefreshView:(UIView <SVPullToRefreshViewProtocol> *)_pullToRefreshView {
+    pullToRefreshView = _pullToRefreshView;
+    self.tableView.pullToRefreshControl.pullToRefreshView = _pullToRefreshView;
+}
+
 #pragma mark - View Lifecycle
 
 - (void) loadView {
@@ -298,15 +304,14 @@
         shouldPullToRefresh = [self.statefulDelegate statefulTableViewControllerShouldPullToRefresh:self];
     }
 
-    // TODO: for iOS 6 make possible to use standart control
     if(!self.hasAddedPullToRefreshControl && shouldPullToRefresh) {
-        if([self respondsToSelector:@selector(refreshControl)]) {
+        if([self respondsToSelector:@selector(refreshControl)] && !self.pullToRefreshView) {
             self.refreshControl = [[UIRefreshControl alloc] init];
             [self.refreshControl addTarget:self action:@selector(_loadFromPullToRefresh) forControlEvents:UIControlEventValueChanged];
         } else {
             [self.tableView addPullToRefreshWithActionHandler:^{
                 [safeSelf _loadFromPullToRefresh];
-            }];
+            } pullToRefreshView:pullToRefreshView];
         }
 
         self.hasAddedPullToRefreshControl = YES;
