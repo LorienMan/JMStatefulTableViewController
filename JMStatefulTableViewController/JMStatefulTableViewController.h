@@ -60,6 +60,7 @@ typedef enum {
 @property (strong, nonatomic) UIView *errorView;
 
 @property (strong, nonatomic) UIView <SVPullToRefreshViewProtocol> *pullToRefreshView;
+@property (strong, nonatomic) UIView <SVInfiniteScrollingViewProtocol> *infiniteScrollingView;
 
 @property (nonatomic, unsafe_unretained) id <JMStatefulTableViewControllerDelegate> statefulDelegate;
 

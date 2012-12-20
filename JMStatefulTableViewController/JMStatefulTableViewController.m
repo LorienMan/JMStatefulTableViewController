@@ -7,11 +7,13 @@
 //
 
 #import "JMStatefulTableViewController.h"
+#import "SVInfiniteScrollingView.h"
 
 @interface JMStatefulTableViewController ()
 
 @property (nonatomic, assign) BOOL isCountingRows;
 @property (nonatomic, assign) BOOL hasAddedPullToRefreshControl;
+@property (nonatomic, assign) BOOL hasAddedInfiniteScrollingControl;
 
 // Loading
 
@@ -28,6 +30,7 @@
 
 @implementation JMStatefulTableViewController
 @synthesize pullToRefreshView;
+@synthesize infiniteScrollingView;
 
 - (id) initWithStyle:(UITableViewStyle)style {
     self = [super initWithStyle:style];
@@ -95,9 +98,11 @@
             }
 
             [self updateControlsStatuses];
+            [self _infiniteScrollingFinishedLoading];
         } failure:^(NSError *error) {
             //TODO What should we do here?
             self.statefulState = JMStatefulTableViewControllerStateIdle;
+            [self _infiniteScrollingFinishedLoading];
         }];
     } else {
         self.tableView.showsInfiniteScrolling = NO;
@@ -140,17 +145,40 @@
 }
 
 - (void)updateControlsStatuses {
-    if([self.statefulDelegate statefulTableViewControllerShouldBeginLoadingNextPage:self]) {
-        self.tableView.showsInfiniteScrolling = YES;
-    } else {
-        self.tableView.showsInfiniteScrolling = NO;
+    __weak JMStatefulTableViewController *safeSelf = self;
+
+    BOOL shouldPullToRefresh = YES;
+    if([self.statefulDelegate respondsToSelector:@selector(statefulTableViewControllerShouldPullToRefresh:)]) {
+        shouldPullToRefresh = [self.statefulDelegate statefulTableViewControllerShouldPullToRefresh:self];
     }
 
-    if([self.statefulDelegate statefulTableViewControllerShouldPullToRefresh:self]) {
-        self.tableView.showsPullToRefresh = YES;
-    } else {
-        self.tableView.showsPullToRefresh = NO;
+    if(!self.hasAddedPullToRefreshControl && shouldPullToRefresh) {
+        if([self respondsToSelector:@selector(refreshControl)] && !self.pullToRefreshView) {
+            self.refreshControl = [[UIRefreshControl alloc] init];
+            [self.refreshControl addTarget:self action:@selector(_loadFromPullToRefresh) forControlEvents:UIControlEventValueChanged];
+        } else {
+            [self.tableView addPullToRefreshWithActionHandler:^{
+                [safeSelf _loadFromPullToRefresh];
+            } pullToRefreshView:pullToRefreshView];
+        }
+
+        self.hasAddedPullToRefreshControl = YES;
     }
+
+    BOOL shouldInfinitelyScroll = YES;
+    if([self.statefulDelegate respondsToSelector:@selector(statefulTableViewControllerShouldInfinitelyScroll:)]) {
+        shouldInfinitelyScroll = [self.statefulDelegate statefulTableViewControllerShouldInfinitelyScroll:self];
+    }
+
+    if (!self.hasAddedInfiniteScrollingControl && shouldInfinitelyScroll) {
+        [self.tableView addInfiniteScrollingWithActionHandler:^{
+            [safeSelf _loadNextPage];
+        } infiniteScrollingView:infiniteScrollingView];
+        self.hasAddedInfiniteScrollingControl = YES;
+    }
+
+    self.tableView.showsPullToRefresh = shouldPullToRefresh;
+    self.tableView.showsInfiniteScrolling = shouldInfinitelyScroll;
 }
 
 #pragma mark - Table View Cells & NSIndexPaths
@@ -179,6 +207,10 @@
     }
 
     return totalHeight;
+}
+
+- (void) _infiniteScrollingFinishedLoading {
+    [self.tableView.infiniteScrollingControl loadingCompleted];
 }
 
 - (void) _pullToRefreshFinishedLoading {
@@ -271,6 +303,11 @@
     self.tableView.pullToRefreshControl.pullToRefreshView = _pullToRefreshView;
 }
 
+- (void)setInfiniteScrollingView:(UIView <SVInfiniteScrollingViewProtocol> *)_infiniteScrollingView {
+    infiniteScrollingView = _infiniteScrollingView;
+    self.tableView.infiniteScrollingControl.infiniteScrollingView = _infiniteScrollingView;
+}
+
 #pragma mark - View Lifecycle
 
 - (void) loadView {
@@ -296,42 +333,6 @@
 
 - (void) viewWillAppear:(BOOL)animated {
     [self _loadFirstPage];
-
-    __block JMStatefulTableViewController *safeSelf = self;
-
-    BOOL shouldPullToRefresh = YES;
-    if([self.statefulDelegate respondsToSelector:@selector(statefulTableViewControllerShouldPullToRefresh:)]) {
-        shouldPullToRefresh = [self.statefulDelegate statefulTableViewControllerShouldPullToRefresh:self];
-    }
-
-    if(!self.hasAddedPullToRefreshControl && shouldPullToRefresh) {
-        if([self respondsToSelector:@selector(refreshControl)] && !self.pullToRefreshView) {
-            self.refreshControl = [[UIRefreshControl alloc] init];
-            [self.refreshControl addTarget:self action:@selector(_loadFromPullToRefresh) forControlEvents:UIControlEventValueChanged];
-        } else {
-            [self.tableView addPullToRefreshWithActionHandler:^{
-                [safeSelf _loadFromPullToRefresh];
-            } pullToRefreshView:pullToRefreshView];
-        }
-
-        self.hasAddedPullToRefreshControl = YES;
-    }
-
-    BOOL shouldInfinitelyScroll = YES;
-    if([self.statefulDelegate respondsToSelector:@selector(statefulTableViewControllerShouldInfinitelyScroll:)]) {
-        shouldInfinitelyScroll = [self.statefulDelegate statefulTableViewControllerShouldInfinitelyScroll:self];
-    }
-
-    if (shouldInfinitelyScroll) {
-        if(self.tableView.infiniteScrollingView == nil) {
-            [self.tableView addInfiniteScrollingWithActionHandler:^{
-                [safeSelf _loadNextPage];
-            }];
-            self.tableView.showsInfiniteScrolling = YES;
-        }
-    } else {
-        self.tableView.showsInfiniteScrolling = NO;
-    }
 
     // TODO: add handler to observe loading previous data
 
