@@ -41,8 +41,11 @@
 
     return self;
 }
+
 - (void) dealloc {
     self.statefulDelegate = nil;
+    [self.tableView removePullToRefresh];
+    [self.tableView removeInfiniteScrolling];
 }
 
 #pragma mark - Loading Methods
