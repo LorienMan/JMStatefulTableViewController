@@ -9,6 +9,9 @@
 #import "JMStatefulTableViewController.h"
 #import "SVInfiniteScrollingView.h"
 
+#define ASYNC_START dispatch_async(dispatch_get_current_queue(), ^{
+#define ASYNC_END });
+
 @interface JMStatefulTableViewController ()
 
 @property (nonatomic, assign) BOOL isCountingRows;
@@ -70,6 +73,7 @@
     [self.tableView reloadData];
 
     [self.statefulDelegate statefulTableViewControllerWillBeginInitialLoading:self completionBlock:^{
+        ASYNC_START
         [self.tableView reloadData]; // We have to call reloadData before we call _totalNumberOfRows otherwise the new count (after loading) won't be accurately reflected.
 
         if([self _totalNumberOfRows] > 0) {
@@ -79,8 +83,11 @@
         }
 
         [self updateControlsStatuses];
+        ASYNC_END
     } failure:^(NSError *error) {
+        ASYNC_START
         self.statefulState = JMStatefulTableViewControllerError;
+        ASYNC_END
     }];
 }
 - (void) _loadNextPage {
@@ -92,6 +99,7 @@
         self.statefulState = JMStatefulTableViewControllerStateLoadingNextPage;
 
         [self.statefulDelegate statefulTableViewControllerWillBeginLoadingNextPage:self completionBlock:^{
+            ASYNC_START
             [self.tableView reloadData];
 
             if([self _totalNumberOfRows] > 0) {
@@ -102,10 +110,13 @@
 
             [self updateControlsStatuses];
             [self _infiniteScrollingFinishedLoading];
+            ASYNC_END
         } failure:^(NSError *error) {
+            ASYNC_START
             //TODO What should we do here?
             self.statefulState = JMStatefulTableViewControllerStateIdle;
             [self _infiniteScrollingFinishedLoading];
+            ASYNC_END
         }];
     } else {
         self.tableView.showsInfiniteScrolling = NO;
@@ -118,6 +129,7 @@
     self.statefulState = JMStatefulTableViewControllerStateLoadingFromPullToRefresh;
 
     [self.statefulDelegate statefulTableViewControllerWillBeginLoadingFromPullToRefresh:self completionBlock:^(NSArray *indexPaths) {
+        ASYNC_START
         if([indexPaths count] > 0) {
             CGFloat totalHeights = [self _cumulativeHeightForCellsAtIndexPaths:indexPaths];
 
@@ -140,10 +152,13 @@
 
         [self updateControlsStatuses];
         [self _pullToRefreshFinishedLoading];
+        ASYNC_END
     } failure:^(NSError *error) {
+        ASYNC_START
         //TODO: What should we do here?
         self.statefulState = JMStatefulTableViewControllerStateIdle;
         [self _pullToRefreshFinishedLoading];
+        ASYNC_END
     }];
 }
 
