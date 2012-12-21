@@ -63,12 +63,12 @@
 
 - (void) _loadFirstPage {
     if(self.statefulState == JMStatefulTableViewControllerStateInitialLoading || [self _totalNumberOfRows] > 0) return;
-
-    self.statefulState = JMStatefulTableViewControllerStateInitialLoading;
-
-    // For initial loading disable inf scrolling and pull to refresh
+    
+    // For initial loading disable inf scrolling
     self.tableView.showsInfiniteScrolling = NO;
     self.tableView.showsPullToRefresh = NO;
+
+    self.statefulState = JMStatefulTableViewControllerStateInitialLoading;
 
     [self.tableView reloadData];
 
