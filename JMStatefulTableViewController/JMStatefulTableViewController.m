@@ -9,9 +9,6 @@
 #import "JMStatefulTableViewController.h"
 #import "SVInfiniteScrollingView.h"
 
-#define ASYNC_START dispatch_async(dispatch_get_current_queue(), ^{
-#define ASYNC_END });
-
 @interface JMStatefulTableViewController ()
 
 @property (nonatomic, assign) BOOL isCountingRows;
@@ -64,32 +61,30 @@
 - (void) _loadFirstPage {
     if(self.statefulState == JMStatefulTableViewControllerStateInitialLoading || [self _totalNumberOfRows] > 0) return;
     
+    [self.tableView reloadData];
+    
     // For initial loading disable inf scrolling
     self.tableView.showsInfiniteScrolling = NO;
     self.tableView.showsPullToRefresh = NO;
 
     self.statefulState = JMStatefulTableViewControllerStateInitialLoading;
 
-    [self.tableView reloadData];
-
+    __weak JMStatefulTableViewController *safeSelf = self;
     [self.statefulDelegate statefulTableViewControllerWillBeginInitialLoading:self completionBlock:^{
-        ASYNC_START
-        [self.tableView reloadData]; // We have to call reloadData before we call _totalNumberOfRows otherwise the new count (after loading) won't be accurately reflected.
+        [safeSelf.tableView reloadData]; // We have to call reloadData before we call _totalNumberOfRows otherwise the new count (after loading) won't be accurately reflected.
 
-        if([self _totalNumberOfRows] > 0) {
-            self.statefulState = JMStatefulTableViewControllerStateIdle;
+        if([safeSelf _totalNumberOfRows] > 0) {
+            safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
         } else {
-            self.statefulState = JMStatefulTableViewControllerStateEmpty;
+            safeSelf.statefulState = JMStatefulTableViewControllerStateEmpty;
         }
 
-        [self updateControlsStatuses];
-        ASYNC_END
+        [safeSelf updateControlsStatuses];
     } failure:^(NSError *error) {
-        ASYNC_START
-        self.statefulState = JMStatefulTableViewControllerError;
-        ASYNC_END
+        safeSelf.statefulState = JMStatefulTableViewControllerError;
     }];
 }
+
 - (void) _loadNextPage {
     if(self.statefulState == JMStatefulTableViewControllerStateLoadingNextPage) return;
 
@@ -98,25 +93,23 @@
 
         self.statefulState = JMStatefulTableViewControllerStateLoadingNextPage;
 
+        __weak JMStatefulTableViewController *safeSelf = self;
         [self.statefulDelegate statefulTableViewControllerWillBeginLoadingNextPage:self completionBlock:^{
-            ASYNC_START
-            [self.tableView reloadData];
+            [safeSelf.tableView reloadData];
 
-            if([self _totalNumberOfRows] > 0) {
-                self.statefulState = JMStatefulTableViewControllerStateIdle;
+            if([safeSelf _totalNumberOfRows] > 0) {
+                safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
             } else {
-                self.statefulState = JMStatefulTableViewControllerStateEmpty;
+                safeSelf.statefulState = JMStatefulTableViewControllerStateEmpty;
             }
 
-            [self updateControlsStatuses];
-            [self _infiniteScrollingFinishedLoading];
-            ASYNC_END
+            [safeSelf _infiniteScrollingFinishedLoading];
+            [safeSelf updateControlsStatuses];
         } failure:^(NSError *error) {
-            ASYNC_START
             //TODO What should we do here?
-            self.statefulState = JMStatefulTableViewControllerStateIdle;
-            [self _infiniteScrollingFinishedLoading];
-            ASYNC_END
+            safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
+            [safeSelf _infiniteScrollingFinishedLoading];
+            [safeSelf updateControlsStatuses];
         }];
     } else {
         self.tableView.showsInfiniteScrolling = NO;
@@ -128,37 +121,37 @@
 
     self.statefulState = JMStatefulTableViewControllerStateLoadingFromPullToRefresh;
 
+    __weak JMStatefulTableViewController *safeSelf = self;
     [self.statefulDelegate statefulTableViewControllerWillBeginLoadingFromPullToRefresh:self completionBlock:^(NSArray *indexPaths) {
-        ASYNC_START
         if([indexPaths count] > 0) {
-            CGFloat totalHeights = [self _cumulativeHeightForCellsAtIndexPaths:indexPaths];
+            CGFloat totalHeights = [safeSelf _cumulativeHeightForCellsAtIndexPaths:indexPaths];
 
             //Offset by the height fo the pull to refresh view when it's expanded:
-            [self.tableView setContentInset:UIEdgeInsetsMake(0.0f, 0.0f, 0.0f, 0.0f)];
-            [self.tableView reloadData];
+            [safeSelf.tableView setContentInset:UIEdgeInsetsMake(0.0f, 0.0f, 0.0f, 0.0f)];
+            [safeSelf.tableView reloadData];
 
-            if(self.tableView.contentOffset.y == 0) {
-                self.tableView.contentOffset = CGPointMake(0, (self.tableView.contentOffset.y + totalHeights) - 60.0);
+            if(safeSelf.tableView.contentOffset.y == 0) {
+                safeSelf.tableView.contentOffset = CGPointMake(0, (safeSelf.tableView.contentOffset.y + totalHeights) - 60.0);
             } else {
-                self.tableView.contentOffset = CGPointMake(0, (self.tableView.contentOffset.y + totalHeights));
+                safeSelf.tableView.contentOffset = CGPointMake(0, (safeSelf.tableView.contentOffset.y + totalHeights));
             }
-        }
-
-        if([self _totalNumberOfRows] > 0) {
-            self.statefulState = JMStatefulTableViewControllerStateIdle;
         } else {
-            self.statefulState = JMStatefulTableViewControllerStateEmpty;
+            [safeSelf.tableView reloadData];
         }
 
-        [self updateControlsStatuses];
-        [self _pullToRefreshFinishedLoading];
-        ASYNC_END
+        if([safeSelf _totalNumberOfRows] > 0) {
+            safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
+        } else {
+            safeSelf.statefulState = JMStatefulTableViewControllerStateEmpty;
+        }
+
+        [safeSelf _pullToRefreshFinishedLoading];
+        [safeSelf updateControlsStatuses];
     } failure:^(NSError *error) {
-        ASYNC_START
         //TODO: What should we do here?
-        self.statefulState = JMStatefulTableViewControllerStateIdle;
-        [self _pullToRefreshFinishedLoading];
-        ASYNC_END
+        safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
+        [safeSelf _pullToRefreshFinishedLoading];
+        [safeSelf updateControlsStatuses];
     }];
 }
 
@@ -197,6 +190,12 @@
 
     self.tableView.showsPullToRefresh = shouldPullToRefresh;
     self.tableView.showsInfiniteScrolling = shouldInfinitelyScroll;
+
+    if (self.tableView.showsPullToRefresh)
+        [self.tableView updatePullToRefresh];
+
+    if (self.tableView.showsInfiniteScrolling)
+        [self.tableView updateInfiniteScrolling];
 }
 
 #pragma mark - Table View Cells & NSIndexPaths
@@ -253,7 +252,6 @@
             self.tableView.scrollEnabled = YES;
             self.tableView.tableHeaderView.hidden = NO;
             self.tableView.tableFooterView.hidden = NO;
-            [self.tableView reloadData];
 
             break;
 
@@ -262,7 +260,6 @@
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
-            [self.tableView reloadData];
 
             break;
 
@@ -271,7 +268,6 @@
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
-            [self.tableView reloadData];
 
         case JMStatefulTableViewControllerStateLoadingNextPage:
             // TODO
@@ -286,7 +282,6 @@
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
-            [self.tableView reloadData];
             break;
 
         default:
