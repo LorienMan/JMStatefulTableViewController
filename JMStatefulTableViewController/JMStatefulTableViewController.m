@@ -14,10 +14,11 @@
 @property (nonatomic, assign) BOOL isCountingRows;
 @property (nonatomic, assign) BOOL hasAddedPullToRefreshControl;
 @property (nonatomic, assign) BOOL hasAddedInfiniteScrollingControl;
+@property (nonatomic, strong) UIView *backgroundView;
 
 // Loading
 
-- (void) _loadFirstPage;
+- (void) _loadFirstPage:(BOOL)force;
 - (void) _loadNextPage;
 
 - (void) _loadFromPullToRefresh;
@@ -50,16 +51,20 @@
 
 #pragma mark - Loading Methods
 
+- (void) reloadTable {
+    [self _loadFirstPage:YES];
+}
+
 - (void) loadNewer {
     if([self _totalNumberOfRows] == 0) {
-        [self _loadFirstPage];
+        [self _loadFirstPage:NO];
     } else {
         [self _loadFromPullToRefresh];
     }
 }
 
-- (void) _loadFirstPage {
-    if(self.statefulState == JMStatefulTableViewControllerStateInitialLoading || [self _totalNumberOfRows] > 0) return;
+- (void) _loadFirstPage:(BOOL)force {
+    if(!force && (self.statefulState == JMStatefulTableViewControllerStateInitialLoading || [self _totalNumberOfRows] > 0)) return;
     
     [self.tableView reloadData];
     
@@ -248,7 +253,7 @@
 
     switch (_statefulState) {
         case JMStatefulTableViewControllerStateIdle:
-            self.tableView.backgroundView = nil;
+            self.backgroundView = nil;
             self.tableView.scrollEnabled = YES;
             self.tableView.tableHeaderView.hidden = NO;
             self.tableView.tableFooterView.hidden = NO;
@@ -256,7 +261,7 @@
             break;
 
         case JMStatefulTableViewControllerStateInitialLoading:
-            self.tableView.backgroundView = self.loadingView;
+            self.backgroundView = self.loadingView;
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
@@ -264,7 +269,7 @@
             break;
 
         case JMStatefulTableViewControllerStateEmpty:
-            self.tableView.backgroundView = self.emptyView;
+            self.backgroundView = self.emptyView;
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
@@ -278,7 +283,7 @@
             break;
 
         case JMStatefulTableViewControllerError:
-            self.tableView.backgroundView = self.errorView;
+            self.backgroundView = self.errorView;
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
@@ -294,21 +299,27 @@
 }
 
 - (void)setEmptyView:(UIView *)emptyView {
-    if (_emptyView && self.tableView.backgroundView == _emptyView)
-        self.tableView.backgroundView = emptyView;
+    if (_emptyView && self.backgroundView == _emptyView)
+        self.backgroundView = emptyView;
     _emptyView = emptyView;
 }
 
 - (void)setLoadingView:(UIView *)loadingView {
-    if (_loadingView && self.tableView.backgroundView == _loadingView)
-        self.tableView.backgroundView = loadingView;
+    if (_loadingView && self.backgroundView == _loadingView)
+        self.backgroundView = loadingView;
     _loadingView = loadingView;
 }
 
 - (void)setErrorView:(UIView *)errorView {
-    if (_errorView && self.tableView.backgroundView == _errorView)
-        self.tableView.backgroundView = errorView;
+    if (_errorView && self.backgroundView == _errorView)
+        self.backgroundView = errorView;
     _errorView = errorView;
+}
+
+- (void)setBackgroundView:(UIView *)backgroundView {
+    [_backgroundView removeFromSuperview];
+    _backgroundView = backgroundView;
+    [self.tableView insertSubview:_backgroundView atIndex:0];
 }
 
 - (void)setPullToRefreshView:(UIView <SVPullToRefreshViewProtocol> *)_pullToRefreshView {
@@ -345,7 +356,7 @@
 }
 
 - (void) viewWillAppear:(BOOL)animated {
-    [self _loadFirstPage];
+    [self _loadFirstPage:NO];
 
     // TODO: add handler to observe loading previous data
 
