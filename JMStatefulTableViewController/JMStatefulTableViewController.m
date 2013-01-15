@@ -29,7 +29,16 @@
 
 @end
 
-@implementation JMStatefulTableViewController
+#define TABLE_TOP_MAX_OFFSET 350
+typedef enum {
+    TablePositionBottom = 0,
+    TablePositionTop
+} TablePosition;
+
+@implementation JMStatefulTableViewController {
+    BOOL observing;
+    TablePosition tablePosition;
+}
 @synthesize pullToRefreshView;
 @synthesize infiniteScrollingView;
 
@@ -44,6 +53,7 @@
 }
 
 - (void) dealloc {
+    [self stopObserving];
     self.statefulDelegate = nil;
     [self.tableView removePullToRefresh];
     [self.tableView removeInfiniteScrolling];
@@ -85,6 +95,9 @@
         }
 
         [safeSelf updateControlsStatuses];
+        // Make attempt to load previous data
+        tablePosition = TablePositionBottom;
+        [self checkToLoadPreviousData:self.tableView.contentOffset];
     } failure:^(NSError *error) {
         safeSelf.statefulState = JMStatefulTableViewControllerError;
     }];
@@ -157,6 +170,34 @@
         safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
         [safeSelf _pullToRefreshFinishedLoading];
         [safeSelf updateControlsStatuses];
+    }];
+}
+
+- (void) _loadPreviousPage {
+    __weak JMStatefulTableViewController *safeSelf = self;
+    [self.statefulDelegate statefulTableViewControllerWillBeginLoadingPreviousPage:self completionBlock:^{
+        CGSize contentSize = self.tableView.contentSize;
+        CGPoint contentOffset = self.tableView.contentOffset;
+        [safeSelf.tableView reloadData];
+        tablePosition = TablePositionBottom;
+        CGSize newContentSize = self.tableView.contentSize;
+
+        if (newContentSize.height > self.tableView.bounds.size.height) {
+            CGFloat dy = newContentSize.height - contentSize.height;
+            contentOffset.y += dy;
+            contentOffset.y = MIN(contentOffset.y, newContentSize.height - self.tableView.bounds.size.height);
+            self.tableView.contentOffset = contentOffset;
+        }
+
+        if([safeSelf _totalNumberOfRows] > 0) {
+            safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
+        } else {
+            safeSelf.statefulState = JMStatefulTableViewControllerStateEmpty;
+        }
+
+        [self checkToLoadPreviousData:self.tableView.contentOffset];
+    } failure:^(NSError *error) {
+        tablePosition = TablePositionBottom;
     }];
 }
 
@@ -346,10 +387,13 @@
 
 - (void) viewDidLoad {
     [super viewDidLoad];
+    [self startObserving];
 }
+
 - (void) viewDidUnload {
     [super viewDidUnload];
 
+    [self stopObserving];
     self.loadingView = nil;
     self.emptyView = nil;
     self.errorView = nil;
@@ -358,13 +402,62 @@
 - (void) viewWillAppear:(BOOL)animated {
     [self _loadFirstPage:NO];
 
-    // TODO: add handler to observe loading previous data
-
     [super viewWillAppear:animated];
 }
 
 - (BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
     return (interfaceOrientation == UIInterfaceOrientationPortrait);
+}
+
+#pragma mark Content offset observing
+
+- (void)startObserving {
+    if (observing)
+        return;
+
+    observing = YES;
+    [self.tableView addObserver:self forKeyPath:@"contentOffset" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:NULL];
+}
+
+- (void)stopObserving {
+    if (!observing)
+        return;
+
+    observing = NO;
+    [self.tableView removeObserver:self forKeyPath:@"contentOffset"];
+}
+
+- (void)contentOffsetChanged:(CGPoint)contentOffset {
+    if ((!self.tableView.isDecelerating && !self.tableView.tracking) || (self.statefulState != JMStatefulTableViewControllerStateIdle && self.statefulState != JMStatefulTableViewControllerStateEmpty))
+        return;
+
+    [self checkToLoadPreviousData:contentOffset];
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    if ([keyPath isEqualToString:@"contentOffset"]) {
+        [self contentOffsetChanged:[[change valueForKey:NSKeyValueChangeNewKey] CGPointValue]];
+    } else {
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+    }
+}
+
+- (void)checkToLoadPreviousData:(CGPoint)contentOffset {
+    TablePosition newPosition;
+    CGRect headerFrame = self.tableView.tableHeaderView.frame;
+    if (contentOffset.y <= headerFrame.origin.y + headerFrame.size.height + TABLE_TOP_MAX_OFFSET) {
+        newPosition = TablePositionTop;
+    } else {
+        newPosition = TablePositionBottom;
+    }
+
+    if (newPosition != tablePosition && newPosition == TablePositionTop) {
+        if ([self.statefulDelegate respondsToSelector:@selector(statefulTableViewControllerShouldLoadPreviousPage:)] &&
+                [self.statefulDelegate statefulTableViewControllerShouldLoadPreviousPage:self]) {
+            tablePosition = TablePositionTop;
+            [self _loadPreviousPage];
+        }
+    }
 }
 
 #pragma mark - JMStatefulTableViewControllerDelegate

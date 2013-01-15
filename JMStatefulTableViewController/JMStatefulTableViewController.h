@@ -49,6 +49,12 @@ typedef enum {
 @optional
 - (BOOL) statefulTableViewControllerShouldInfinitelyScroll:(JMStatefulTableViewController *)vc;
 
+@optional
+- (void) statefulTableViewControllerWillBeginLoadingPreviousPage:(JMStatefulTableViewController *)vc completionBlock:(void (^)())success failure:(void (^)(NSError *error))failure;
+
+@optional
+- (BOOL) statefulTableViewControllerShouldLoadPreviousPage:(JMStatefulTableViewController *)vc;
+
 @end
 
 @interface JMStatefulTableViewController : UITableViewController <JMStatefulTableViewControllerDelegate>
