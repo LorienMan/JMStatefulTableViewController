@@ -41,6 +41,7 @@ typedef enum {
 }
 @synthesize pullToRefreshView;
 @synthesize infiniteScrollingView;
+@synthesize tryToUseStandardPullToRefresh;
 
 - (id) initWithStyle:(UITableViewStyle)style {
     self = [super initWithStyle:style];
@@ -75,14 +76,11 @@ typedef enum {
 
 - (void) _loadFirstPage:(BOOL)force {
     if(!force && (self.statefulState == JMStatefulTableViewControllerStateInitialLoading || [self _totalNumberOfRows] > 0)) return;
-    
-    [self.tableView reloadData];
-    
-    // For initial loading disable inf scrolling
-    self.tableView.showsInfiniteScrolling = NO;
-    self.tableView.showsPullToRefresh = NO;
 
     self.statefulState = JMStatefulTableViewControllerStateInitialLoading;
+
+    [self.tableView reloadData];
+    [self updateControlsStatuses];
 
     __weak JMStatefulTableViewController *safeSelf = self;
     [self.statefulDelegate statefulTableViewControllerWillBeginInitialLoading:self completionBlock:^{
@@ -125,7 +123,11 @@ typedef enum {
             [safeSelf updateControlsStatuses];
         } failure:^(NSError *error) {
             //TODO What should we do here?
-            safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
+            if([safeSelf _totalNumberOfRows] > 0) {
+                safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
+            } else {
+                safeSelf.statefulState = JMStatefulTableViewControllerError;
+            }
             [safeSelf _infiniteScrollingFinishedLoading];
             [safeSelf updateControlsStatuses];
         }];
@@ -167,7 +169,11 @@ typedef enum {
         [safeSelf updateControlsStatuses];
     } failure:^(NSError *error) {
         //TODO: What should we do here?
-        safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
+        if([safeSelf _totalNumberOfRows] > 0) {
+            safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
+        } else {
+            safeSelf.statefulState = JMStatefulTableViewControllerError;
+        }
         [safeSelf _pullToRefreshFinishedLoading];
         [safeSelf updateControlsStatuses];
     }];
@@ -210,7 +216,7 @@ typedef enum {
     }
 
     if(!self.hasAddedPullToRefreshControl && shouldPullToRefresh) {
-        if([self respondsToSelector:@selector(refreshControl)] && !self.pullToRefreshView) {
+       if(tryToUseStandardPullToRefresh && [self respondsToSelector:@selector(refreshControl)] && !self.pullToRefreshView) {
             self.refreshControl = [[UIRefreshControl alloc] init];
             [self.refreshControl addTarget:self action:@selector(_loadFromPullToRefresh) forControlEvents:UIControlEventValueChanged];
         } else {
@@ -235,7 +241,9 @@ typedef enum {
     }
 
     self.tableView.showsPullToRefresh = shouldPullToRefresh;
-    self.tableView.showsInfiniteScrolling = shouldInfinitelyScroll;
+    self.tableView.showsInfiniteScrolling = self.statefulState == JMStatefulTableViewControllerStateInitialLoading ||
+                                            self.statefulState == JMStatefulTableViewControllerError ||
+                                            self.statefulState == JMStatefulTableViewControllerStateEmpty  ? NO : shouldInfinitelyScroll;
 
     if (self.tableView.showsPullToRefresh)
         [self.tableView updatePullToRefresh];

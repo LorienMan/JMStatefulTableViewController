@@ -70,6 +70,8 @@ typedef enum {
 
 @property (nonatomic, unsafe_unretained) id <JMStatefulTableViewControllerDelegate> statefulDelegate;
 
+@property (nonatomic) BOOL tryToUseStandardPullToRefresh;
+
 - (void) reloadTable;
 - (void) loadNewer;
 
