@@ -38,6 +38,7 @@ typedef enum {
 @implementation JMStatefulTableViewController {
     BOOL observing;
     TablePosition tablePosition;
+    UIView *_backgroundViewContainer;
 }
 @synthesize pullToRefreshView;
 @synthesize infiniteScrollingView;
@@ -348,27 +349,50 @@ typedef enum {
 }
 
 - (void)setEmptyView:(UIView *)emptyView {
-    if (_emptyView && self.backgroundView == _emptyView)
-        self.backgroundView = emptyView;
+    BOOL show = _emptyView && self.backgroundView == _emptyView;
+    [_emptyView removeFromSuperview];
     _emptyView = emptyView;
+
+    if (_emptyView)
+        [_backgroundViewContainer addSubview:_emptyView];
+
+    _emptyView.hidden = YES;
+    if (show)
+        self.backgroundView = _emptyView;
 }
 
 - (void)setLoadingView:(UIView *)loadingView {
-    if (_loadingView && self.backgroundView == _loadingView)
-        self.backgroundView = loadingView;
+    BOOL show = _loadingView && self.backgroundView == _loadingView;
+    [_loadingView removeFromSuperview];
     _loadingView = loadingView;
+
+    if (_loadingView)
+        [_backgroundViewContainer addSubview:_loadingView];
+
+    _loadingView.hidden = YES;
+    if (show)
+        self.backgroundView = _loadingView;
 }
 
 - (void)setErrorView:(UIView *)errorView {
-    if (_errorView && self.backgroundView == _errorView)
-        self.backgroundView = errorView;
+    BOOL show = _errorView && self.backgroundView == _errorView;
+    [_errorView removeFromSuperview];
     _errorView = errorView;
+
+    if (_errorView)
+        [_backgroundViewContainer addSubview:_errorView];
+
+    _errorView.hidden = YES;
+    if (show)
+        self.backgroundView = _errorView;
 }
 
 - (void)setBackgroundView:(UIView *)backgroundView {
-    [_backgroundView removeFromSuperview];
+    _backgroundView.hidden = YES;
     _backgroundView = backgroundView;
-    [self.tableView insertSubview:_backgroundView atIndex:0];
+    _backgroundView.hidden = NO;
+
+    _backgroundViewContainer.hidden = _backgroundView == nil;
 }
 
 - (void)setPullToRefreshView:(UIView <SVPullToRefreshViewProtocol> *)_pullToRefreshView {
@@ -391,6 +415,12 @@ typedef enum {
     self.emptyView = [[JMStatefulTableViewEmptyView alloc] initWithFrame:self.tableView.bounds];
 
     self.errorView = [[JMStatefulTableViewErrorView alloc] initWithFrame:self.tableView.bounds];
+
+    _backgroundViewContainer = [[UIView alloc] initWithFrame:self.tableView.bounds];
+    _backgroundViewContainer.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+    _backgroundViewContainer.backgroundColor = [UIColor clearColor];
+    [self.tableView addSubview:_backgroundViewContainer];
+    [self.tableView sendSubviewToBack:_backgroundViewContainer];
 }
 
 - (void) viewDidLoad {
