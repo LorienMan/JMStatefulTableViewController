@@ -73,6 +73,10 @@ typedef enum {
 @property (nonatomic) BOOL tryToUseStandardPullToRefresh;
 
 - (void) reloadTable;
+- (void) reloadTableCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *))failure;
 - (void) loadNewer;
+- (void) loadNewerCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *))failure;
+- (void) loadNextPageCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *))failure;
+- (void) loadNextPage;
 
 @end

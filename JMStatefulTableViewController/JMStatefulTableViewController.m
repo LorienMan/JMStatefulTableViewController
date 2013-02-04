@@ -39,6 +39,8 @@ typedef enum {
     BOOL observing;
     TablePosition tablePosition;
     UIView *_backgroundViewContainer;
+    void (^successBlock)();
+    void (^failureBlock)(NSError *error);
 }
 @synthesize pullToRefreshView;
 @synthesize infiniteScrollingView;
@@ -64,10 +66,26 @@ typedef enum {
 #pragma mark - Loading Methods
 
 - (void) reloadTable {
-    [self _loadFirstPage:YES];
+    [self reloadTableCompletionBlock:nil failureBlock:nil];
 }
 
 - (void) loadNewer {
+    [self loadNewerCompletionBlock:nil failureBlock:nil];
+}
+
+- (void) loadNextPage {
+    [self loadNextPageCompletionBlock:nil failureBlock:nil];
+}
+
+- (void)reloadTableCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *error))failure {
+    successBlock = [success copy];
+    failureBlock = [failure copy];
+    [self _loadFirstPage:YES];
+}
+
+- (void)loadNewerCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *error))failure {
+    successBlock = [success copy];
+    failureBlock = [failure copy];
     if([self _totalNumberOfRows] == 0) {
         [self _loadFirstPage:NO];
     } else {
@@ -75,10 +93,20 @@ typedef enum {
     }
 }
 
+- (void)loadNextPageCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *error))failure {
+    successBlock = [success copy];
+    failureBlock = [failure copy];
+    [self _loadNextPage];
+}
+
 - (void) _loadFirstPage:(BOOL)force {
     if(!force && (self.statefulState == JMStatefulTableViewControllerStateInitialLoading || [self _totalNumberOfRows] > 0)) return;
 
-    self.statefulState = JMStatefulTableViewControllerStateInitialLoading;
+    if([self _totalNumberOfRows] > 0) {
+        self.statefulState = JMStatefulTableViewControllerStateIdle;
+    } else {
+        self.statefulState = JMStatefulTableViewControllerStateInitialLoading;
+    }
 
     [self.tableView reloadData];
     [self updateControlsStatuses];
@@ -97,8 +125,16 @@ typedef enum {
         // Make attempt to load previous data
         tablePosition = TablePositionBottom;
         [self checkToLoadPreviousData:self.tableView.contentOffset];
+
+        if (successBlock)
+            successBlock();
+        [self _clearBlocks];
     } failure:^(NSError *error) {
         safeSelf.statefulState = JMStatefulTableViewControllerError;
+
+        if (failureBlock)
+            failureBlock(error);
+        [self _clearBlocks];
     }];
 }
 
@@ -106,9 +142,14 @@ typedef enum {
     if(self.statefulState == JMStatefulTableViewControllerStateLoadingNextPage) return;
 
     if([self.statefulDelegate statefulTableViewControllerShouldBeginLoadingNextPage:self]) {
-        self.tableView.showsInfiniteScrolling = YES;
 
-        self.statefulState = JMStatefulTableViewControllerStateLoadingNextPage;
+        if([self _totalNumberOfRows] > 0) {
+            self.statefulState = JMStatefulTableViewControllerStateLoadingNextPage;
+            self.tableView.showsInfiniteScrolling = YES;
+        } else {
+            self.statefulState = JMStatefulTableViewControllerStateInitialLoading;
+            self.tableView.showsInfiniteScrolling = NO;
+        }
 
         __weak JMStatefulTableViewController *safeSelf = self;
         [self.statefulDelegate statefulTableViewControllerWillBeginLoadingNextPage:self completionBlock:^{
@@ -122,6 +163,10 @@ typedef enum {
 
             [safeSelf _infiniteScrollingFinishedLoading];
             [safeSelf updateControlsStatuses];
+
+            if (successBlock)
+                successBlock();
+            [self _clearBlocks];
         } failure:^(NSError *error) {
             //TODO What should we do here?
             if([safeSelf _totalNumberOfRows] > 0) {
@@ -131,6 +176,10 @@ typedef enum {
             }
             [safeSelf _infiniteScrollingFinishedLoading];
             [safeSelf updateControlsStatuses];
+
+            if (failureBlock)
+                failureBlock(error);
+            [self _clearBlocks];
         }];
     } else {
         self.tableView.showsInfiniteScrolling = NO;
@@ -168,6 +217,10 @@ typedef enum {
 
         [safeSelf _pullToRefreshFinishedLoading];
         [safeSelf updateControlsStatuses];
+
+        if (successBlock)
+            successBlock();
+        [self _clearBlocks];
     } failure:^(NSError *error) {
         //TODO: What should we do here?
         if([safeSelf _totalNumberOfRows] > 0) {
@@ -177,6 +230,10 @@ typedef enum {
         }
         [safeSelf _pullToRefreshFinishedLoading];
         [safeSelf updateControlsStatuses];
+
+        if (failureBlock)
+            failureBlock(error);
+        [self _clearBlocks];
     }];
 }
 
@@ -251,6 +308,11 @@ typedef enum {
 
     if (self.tableView.showsInfiniteScrolling)
         [self.tableView updateInfiniteScrolling];
+}
+
+- (void) _clearBlocks {
+    successBlock = nil;
+    failureBlock = nil;
 }
 
 #pragma mark - Table View Cells & NSIndexPaths
