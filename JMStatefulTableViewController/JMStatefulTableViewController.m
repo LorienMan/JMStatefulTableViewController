@@ -115,6 +115,8 @@ typedef enum {
     [self.statefulDelegate statefulTableViewControllerWillBeginInitialLoading:self completionBlock:^{
         [safeSelf.tableView reloadData]; // We have to call reloadData before we call _totalNumberOfRows otherwise the new count (after loading) won't be accurately reflected.
 
+        tablePosition = TablePositionBottom;
+
         if([safeSelf _totalNumberOfRows] > 0) {
             safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
         } else {
@@ -130,6 +132,8 @@ typedef enum {
             successBlock();
         [self _clearBlocks];
     } failure:^(NSError *error) {
+        tablePosition = TablePositionBottom;
+
         safeSelf.statefulState = JMStatefulTableViewControllerError;
 
         if (failureBlock)
@@ -155,6 +159,8 @@ typedef enum {
         [self.statefulDelegate statefulTableViewControllerWillBeginLoadingNextPage:self completionBlock:^{
             [safeSelf.tableView reloadData];
 
+            tablePosition = TablePositionBottom;
+
             if([safeSelf _totalNumberOfRows] > 0) {
                 safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
             } else {
@@ -169,6 +175,7 @@ typedef enum {
             [self _clearBlocks];
         } failure:^(NSError *error) {
             //TODO What should we do here?
+            tablePosition = TablePositionBottom;
             if([safeSelf _totalNumberOfRows] > 0) {
                 safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
             } else {
@@ -209,6 +216,8 @@ typedef enum {
             [safeSelf.tableView reloadData];
         }
 
+        tablePosition = TablePositionBottom;
+
         if([safeSelf _totalNumberOfRows] > 0) {
             safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
         } else {
@@ -223,6 +232,7 @@ typedef enum {
         [self _clearBlocks];
     } failure:^(NSError *error) {
         //TODO: What should we do here?
+        tablePosition = TablePositionBottom;
         if([safeSelf _totalNumberOfRows] > 0) {
             safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
         } else {
