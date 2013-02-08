@@ -315,9 +315,7 @@ typedef enum {
     }
 
     self.tableView.showsPullToRefresh = shouldPullToRefresh;
-    self.tableView.showsInfiniteScrolling = self.statefulState == JMStatefulTableViewControllerStateInitialLoading ||
-                                            self.statefulState == JMStatefulTableViewControllerError ||
-                                            self.statefulState == JMStatefulTableViewControllerStateEmpty  ? NO : shouldInfinitelyScroll;
+    self.tableView.showsInfiniteScrolling = shouldInfinitelyScroll;
 
     if (self.tableView.showsPullToRefresh)
         [self.tableView updatePullToRefresh];
@@ -385,7 +383,6 @@ typedef enum {
             self.tableView.scrollEnabled = YES;
             self.tableView.tableHeaderView.hidden = NO;
             self.tableView.tableFooterView.hidden = NO;
-
             break;
 
         case JMStatefulTableViewControllerStateInitialLoading:
@@ -393,7 +390,6 @@ typedef enum {
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
-
             break;
 
         case JMStatefulTableViewControllerStateEmpty:
@@ -401,13 +397,13 @@ typedef enum {
             self.tableView.scrollEnabled = NO;
             self.tableView.tableHeaderView.hidden = YES;
             self.tableView.tableFooterView.hidden = YES;
-
-        case JMStatefulTableViewControllerStateLoadingNextPage:
-            // TODO
             break;
 
+        case JMStatefulTableViewControllerStateLoadingNextPage:
         case JMStatefulTableViewControllerStateLoadingFromPullToRefresh:
-            // TODO
+            if([self _totalNumberOfRows] > 0) {
+                self.backgroundView = nil;
+            }
             break;
 
         case JMStatefulTableViewControllerError:
@@ -471,6 +467,10 @@ typedef enum {
     _backgroundView.hidden = NO;
 
     _backgroundViewContainer.hidden = _backgroundView == nil;
+}
+
+- (void)setBackgroundViewFrame:(CGRect)backgroundViewFrame {
+    _backgroundViewContainer.frame = backgroundViewFrame;
 }
 
 - (void)setPullToRefreshView:(UIView <SVPullToRefreshViewProtocol> *)_pullToRefreshView {

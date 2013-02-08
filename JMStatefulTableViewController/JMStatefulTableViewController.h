@@ -65,6 +65,8 @@ typedef enum {
 @property (strong, nonatomic) UIView *loadingView;
 @property (strong, nonatomic) UIView *errorView;
 
+- (void) setBackgroundViewFrame:(CGRect)backgroundViewFrame; // To be set if you want to handle some contentInsets, keyboard, etc.
+
 @property (strong, nonatomic) UIView <SVPullToRefreshViewProtocol> *pullToRefreshView;
 @property (strong, nonatomic) UIView <SVInfiniteScrollingViewProtocol> *infiniteScrollingView;
 
@@ -77,6 +79,7 @@ typedef enum {
 - (void) loadNewer;
 - (void) loadNewerCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *))failure;
 - (void) loadNextPageCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *))failure;
+
 - (void) loadNextPage;
 
 @end
