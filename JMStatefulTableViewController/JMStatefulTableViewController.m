@@ -301,6 +301,12 @@ typedef enum {
         shouldInfinitelyScroll = [self.statefulDelegate statefulTableViewControllerShouldInfinitelyScroll:self];
     }
 
+    if (self.statefulState == JMStatefulTableViewControllerStateInitialLoading ||
+        self.statefulState == JMStatefulTableViewControllerError ||
+        self.statefulState == JMStatefulTableViewControllerStateEmpty) {
+        shouldInfinitelyScroll = NO;
+    }
+
     if (!self.hasAddedInfiniteScrollingControl && shouldInfinitelyScroll) {
         [self.tableView addInfiniteScrollingWithActionHandler:^{
             [safeSelf _loadNextPage];
