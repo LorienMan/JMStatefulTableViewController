@@ -250,17 +250,17 @@ typedef enum {
 - (void) _loadPreviousPage {
     __weak JMStatefulTableViewController *safeSelf = self;
     [self.statefulDelegate statefulTableViewControllerWillBeginLoadingPreviousPage:self completionBlock:^{
-        CGSize contentSize = self.tableView.contentSize;
-        CGPoint contentOffset = self.tableView.contentOffset;
+        CGSize contentSize = safeSelf.tableView.contentSize;
+        CGPoint contentOffset = safeSelf.tableView.contentOffset;
         [safeSelf.tableView reloadData];
         tablePosition = TablePositionBottom;
-        CGSize newContentSize = self.tableView.contentSize;
+        CGSize newContentSize = safeSelf.tableView.contentSize;
 
-        if (newContentSize.height > self.tableView.bounds.size.height) {
+        if (newContentSize.height > safeSelf.tableView.bounds.size.height) {
             CGFloat dy = newContentSize.height - contentSize.height;
             contentOffset.y += dy;
-            contentOffset.y = MIN(contentOffset.y, newContentSize.height - self.tableView.bounds.size.height);
-            self.tableView.contentOffset = contentOffset;
+            contentOffset.y = MIN(contentOffset.y, newContentSize.height - safeSelf.tableView.bounds.size.height);
+            safeSelf.tableView.contentOffset = contentOffset;
         }
 
         if([safeSelf _totalNumberOfRows] > 0) {
@@ -269,7 +269,9 @@ typedef enum {
             safeSelf.statefulState = JMStatefulTableViewControllerStateEmpty;
         }
 
-        [self checkToLoadPreviousData:self.tableView.contentOffset];
+        dispatch_async(dispatch_get_current_queue(), ^{
+            [safeSelf checkToLoadPreviousData:safeSelf.tableView.contentOffset];
+        });
     } failure:^(NSError *error) {
         tablePosition = TablePositionBottom;
     }];
