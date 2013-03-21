@@ -126,7 +126,9 @@ typedef enum {
         [safeSelf updateControlsStatuses];
         // Make attempt to load previous data
         tablePosition = TablePositionBottom;
-        [self checkToLoadPreviousData:self.tableView.contentOffset];
+        dispatch_async(dispatch_get_current_queue(), ^{
+            [safeSelf checkToLoadPreviousData:safeSelf.tableView.contentOffset];
+        });
 
         if (successBlock)
             successBlock();
@@ -169,6 +171,12 @@ typedef enum {
 
             [safeSelf _infiniteScrollingFinishedLoading];
             [safeSelf updateControlsStatuses];
+
+            // Make attempt to load previous data
+            tablePosition = TablePositionBottom;
+            dispatch_async(dispatch_get_current_queue(), ^{
+                [safeSelf checkToLoadPreviousData:safeSelf.tableView.contentOffset];
+            });
 
             if (successBlock)
                 successBlock();
@@ -216,8 +224,6 @@ typedef enum {
             [safeSelf.tableView reloadData];
         }
 
-        tablePosition = TablePositionBottom;
-
         if([safeSelf _totalNumberOfRows] > 0) {
             safeSelf.statefulState = JMStatefulTableViewControllerStateIdle;
         } else {
@@ -226,6 +232,12 @@ typedef enum {
 
         [safeSelf _pullToRefreshFinishedLoading];
         [safeSelf updateControlsStatuses];
+
+        // Make attempt to load previous data
+        tablePosition = TablePositionBottom;
+        dispatch_async(dispatch_get_current_queue(), ^{
+            [safeSelf checkToLoadPreviousData:safeSelf.tableView.contentOffset];
+        });
 
         if (successBlock)
             successBlock();
