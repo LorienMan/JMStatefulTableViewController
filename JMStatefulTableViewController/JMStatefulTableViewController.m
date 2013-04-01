@@ -582,12 +582,20 @@ typedef enum {
     }
 
     if (newPosition != tablePosition && newPosition == TablePositionTop) {
-        if ([self.statefulDelegate respondsToSelector:@selector(statefulTableViewControllerShouldLoadPreviousPage:)] &&
-                [self.statefulDelegate statefulTableViewControllerShouldLoadPreviousPage:self]) {
-            tablePosition = TablePositionTop;
-            [self _loadPreviousPage];
+        if ([self.statefulDelegate respondsToSelector:@selector(statefulTableViewControllerShouldLoadPreviousPage:)]) {
+            if ([self.statefulDelegate statefulTableViewControllerShouldLoadPreviousPage:self]) {
+                tablePosition = TablePositionTop;
+                [self _loadPreviousPage];
+            } else {
+                [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(checkToLoadPreviousData) object:nil];
+                [self performSelector:@selector(checkToLoadPreviousData) withObject:nil afterDelay:0.3];
+            }
         }
     }
+}
+
+- (void)checkToLoadPreviousData {
+    [self checkToLoadPreviousData:self.tableView.contentOffset];
 }
 
 #pragma mark - JMStatefulTableViewControllerDelegate

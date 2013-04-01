@@ -82,4 +82,7 @@ typedef enum {
 
 - (void) loadNextPage;
 
+- (void) checkToLoadPreviousData;
+
+
 @end
