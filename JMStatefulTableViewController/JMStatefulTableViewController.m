@@ -77,6 +77,10 @@ typedef enum {
     [self loadNextPageCompletionBlock:nil failureBlock:nil];
 }
 
+- (void) loadPreviousPage {
+    [self _loadPreviousPage];
+}
+
 - (void)reloadTableCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *error))failure {
     successBlock = [success copy];
     failureBlock = [failure copy];

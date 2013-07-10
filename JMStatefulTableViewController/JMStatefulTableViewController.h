@@ -81,6 +81,7 @@ typedef enum {
 - (void) loadNextPageCompletionBlock:(void (^)())success failureBlock:(void (^)(NSError *))failure;
 
 - (void) loadNextPage;
+- (void) loadPreviousPage;
 
 - (void) checkToLoadPreviousData;
 
