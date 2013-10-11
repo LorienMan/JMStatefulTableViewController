@@ -579,10 +579,19 @@ typedef enum {
 - (void)checkToLoadPreviousData:(CGPoint)contentOffset {
     TablePosition newPosition;
     CGRect headerFrame = self.tableView.tableHeaderView.frame;
-    if (contentOffset.y <= headerFrame.origin.y + headerFrame.size.height + TABLE_TOP_MAX_OFFSET) {
-        newPosition = TablePositionTop;
+
+    if ([self.tableView numberOfSections] < 2) {
+        if (contentOffset.y <= headerFrame.origin.y + headerFrame.size.height + TABLE_TOP_MAX_OFFSET) {
+            newPosition = TablePositionTop;
+        } else {
+            newPosition = TablePositionBottom;
+        }
     } else {
-        newPosition = TablePositionBottom;
+        if (contentOffset.y <= [self.tableView rectForFooterInSection:0].origin.y + TABLE_TOP_MAX_OFFSET) {
+            newPosition = TablePositionTop;
+        } else {
+            newPosition = TablePositionBottom;
+        }
     }
 
     if (newPosition != tablePosition && newPosition == TablePositionTop) {
